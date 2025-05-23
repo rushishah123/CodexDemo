@@ -11,7 +11,13 @@ Features:
 
 Sample datasets are included:
 - `sample_sales.csv` – simple example with 50 rows.
+- `sample_sales_generated.csv` – generated via `generate_sample_csv.py` (also 50 rows).
 - `company_sales.csv` – a larger file with 200 rows containing `region`, `category`, `price` and `cost` columns.
+
+You can run the lightweight dashboard using `sales_dashboard.py`:
+```bash
+streamlit run sales_dashboard.py
+```
 
 To run the app:
 ```bash
