@@ -50,3 +50,20 @@ docker-compose up --build
 ```
 Top feature 'feature_a' has 120 clicks. Least used feature 'feature_b' has 5 clicks.
 ```
+
+## Sales data utility
+
+The `add.py` script parses a `salesdata.csv` file and generates several helper
+reports:
+
+* `output.csv` and `bargraph.png` — total revenue per product
+* `last_30_days.csv` — records from the last 30 days
+* `daily.png` — daily revenue plot
+* `taxed.csv` — revenue with tax and net calculations
+* `summary.csv` — aggregate statistics per product
+
+Run it from the repository root:
+
+```bash
+python add.py
+```

@@ -1,115 +1,88 @@
-import pandas as pd
-import os
+"""Utility script for generating simple sales reports."""
+
+from __future__ import annotations
+
 import datetime
-import random
+import os
+from pathlib import Path
+from typing import Tuple
+
 import matplotlib.pyplot as plt
+import pandas as pd
 
-# Load sales data and compute stats
-def processdata(file):
-    df = pd.read_csv(file)
-    result = {}
-    for index, row in df.iterrows():
-        if row['Product'] not in result:
-            result[row['Product']] = 0
-        result[row['Product']] = result[row['Product']] + float(row['Revenue'])
+OUTPUT_CSV = Path("output.csv")
+BARGRAPH_PNG = Path("bargraph.png")
+LAST_30_DAYS_CSV = Path("last_30_days.csv")
+DAILY_PNG = Path("daily.png")
+TAXED_CSV = Path("taxed.csv")
+SUMMARY_CSV = Path("summary.csv")
 
-    df2 = pd.DataFrame.from_dict(result, orient='index')
-    df2.reset_index(inplace=True)
-    df2.columns = ['ProductName', 'TotalRev']
-    df2.to_csv('output.csv')
 
-    plt.bar(df2['ProductName'], df2['TotalRev'])
-    plt.savefig('bargraph.png')
+def compute_total_revenue(file_path: str) -> pd.DataFrame:
+    """Aggregate revenue per product and save a bar chart."""
+    df = pd.read_csv(file_path)
+    totals = df.groupby("Product")["Revenue"].sum().reset_index()
+    totals.columns = ["ProductName", "TotalRev"]
+    totals.to_csv(OUTPUT_CSV, index=False)
 
-def unused_function():
-    print("this function is not used")
-    return "bye"
+    plt.bar(totals["ProductName"], totals["TotalRev"])
+    plt.savefig(BARGRAPH_PNG)
+    return totals
 
-def calculate_discount(p, d):
-    return p - (p * d / 100)
-
-def another_unused_func():
-    x = 10
-    y = 20
-    z = x + y
-    print("Unused math", z)
-
-def get_most_profitable_product(file):
-    df = pd.read_csv(file)
-    grouped = df.groupby('Product')['Revenue'].sum()
+def get_most_profitable_product(file_path: str) -> Tuple[str, float]:
+    """Return the most profitable product and its revenue."""
+    df = pd.read_csv(file_path)
+    grouped = df.groupby("Product")["Revenue"].sum()
     return grouped.idxmax(), grouped.max()
 
-def filter_last_30_days(file):
-    df = pd.read_csv(file)
-    df['Date'] = pd.to_datetime(df['Date'])
-    today = datetime.datetime.now()
-    last_month = today - datetime.timedelta(days=30)
-    filtered = df[df['Date'] >= last_month]
-    filtered.to_csv('last_30_days.csv')
+def filter_last_30_days(file_path: str) -> pd.DataFrame:
+    """Filter the sales data to the last 30 days."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"])
+    last_month = datetime.datetime.now() - datetime.timedelta(days=30)
+    filtered = df[df["Date"] >= last_month]
+    filtered.to_csv(LAST_30_DAYS_CSV, index=False)
     return filtered
 
-def messy_loop(df):
-    for i in range(len(df)):
-        if df.iloc[i]['Revenue'] > 1000:
-            print("High Value:", df.iloc[i]['Product'])
+def plot_sales(file_path: str) -> None:
+    """Generate a daily revenue plot."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"])
+    daily = df.groupby("Date")["Revenue"].sum().sort_index()
+    daily.plot()
+    plt.title("Daily Revenue")
+    plt.savefig(DAILY_PNG)
 
-def plot_sales(file):
-    df = pd.read_csv(file)
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.sort_values('Date', inplace=True)
-    df.groupby('Date')['Revenue'].sum().plot()
-    plt.title('Daily Revenue')
-    plt.savefig('daily.png')
-
-# Class with no usage
-class Helper:
-    def helperFunc(self, df):
-        for i in range(len(df)):
-            df.iloc[i]['Revenue'] = df.iloc[i]['Revenue'] * 1.05
-        return df
-
-    def not_used(self):
-        print("not used")
-
-class AnotherHelper:
-    def __init__(self):
-        pass
-    def dummy(self):
-        return "dummy"
-
-def anotherFunction(file):
-    df = pd.read_csv(file)
-    df['Tax'] = df['Revenue'] * 0.18
-    df['Net'] = df['Revenue'] - df['Tax']
-    df.to_csv('taxed.csv')
-    print("Tax file written")
-
-def yetAnother(file):
-    df = pd.read_csv(file)
-    summary = df.groupby('Product')['Revenue'].agg(['sum', 'count', 'mean'])
-    print(summary)
-    summary.to_csv('summary.csv')
-
-# Excessive logging
-def debug_everything(file):
-    df = pd.read_csv(file)
-    print("Read file:", file)
-    print("Columns:", df.columns)
-    print("Head:", df.head())
-    print("Info:", df.info())
-    print("Describe:", df.describe())
+def calculate_tax_and_net(file_path: str) -> pd.DataFrame:
+    """Calculate tax and net revenue for each row."""
+    df = pd.read_csv(file_path)
+    df["Tax"] = df["Revenue"] * 0.18
+    df["Net"] = df["Revenue"] - df["Tax"]
+    df.to_csv(TAXED_CSV, index=False)
     return df
 
-# Command line script with hardcoded filename
-if __name__ == '__main__':
-    file_path = 'salesdata.csv'
-    if os.path.exists(file_path):
-        print("File exists. Proceeding.")
-        processdata(file_path)
-        filter_last_30_days(file_path)
-        plot_sales(file_path)
-        get_most_profitable_product(file_path)
-        anotherFunction(file_path)
-        yetAnother(file_path)
-    else:
+
+def generate_product_summary(file_path: str) -> pd.DataFrame:
+    """Generate summary statistics per product."""
+    df = pd.read_csv(file_path)
+    summary = df.groupby("Product")["Revenue"].agg(["sum", "count", "mean"])
+    summary.to_csv(SUMMARY_CSV)
+    return summary
+
+def main(file_path: str = "salesdata.csv") -> None:
+    """Run a simple reporting workflow on the given CSV file."""
+    if not os.path.exists(file_path):
         print("File does not exist.")
+        return
+
+    print("File exists. Proceeding.")
+    compute_total_revenue(file_path)
+    filter_last_30_days(file_path)
+    plot_sales(file_path)
+    get_most_profitable_product(file_path)
+    calculate_tax_and_net(file_path)
+    generate_product_summary(file_path)
+
+
+if __name__ == "__main__":
+    main()
